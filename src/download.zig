@@ -54,6 +54,9 @@ pub fn downloadZig(allocator: std.mem.Allocator, version: []const u8, file: []co
         }
     };
 
+    try writer.interface.defaultFlush();
+    try zig_version.sync();
+
     std.log.info("Download got status {d}", .{@intFromEnum(response.status)});
     const path = try versionDir.realpathAlloc(allocator, file);
 
