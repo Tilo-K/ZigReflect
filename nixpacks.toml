@@ -5,7 +5,7 @@ ZIG_VERSION = "0.15.1"
 NIXPACKS_ZIG_VERSION = "0.15.1"
 
 [phases.build]
-cmds = ["zig build -Doptimize=ReleaseFast"]
+cmds = ["zig version", "zig build -Doptimize=ReleaseFast"]
 
 [start]
 cmd = "./zig-out/bin/ZigReflect"
