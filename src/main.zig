@@ -33,9 +33,12 @@ fn on_request(r: zap.Request) !void {
                     download.errors.Timeout => {
                         r.setStatusNumeric(504);
                         try r.sendBody("ziglang.org did not respond in time");
+                        return;
                     },
                     else => {
                         r.setStatusNumeric(500);
+                        std.log.err("An unexpected error happend {s}", .{@errorName(e)});
+
                         try r.sendBody("Something went wrong");
                         return;
                     },

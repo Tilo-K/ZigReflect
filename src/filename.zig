@@ -50,5 +50,24 @@ pub fn extractFilename(allocator: std.mem.Allocator, filename: []const u8) ?[]co
         version = new_version;
     }
 
+    if (!isValidVersion(version)) {
+        return null;
+    }
+
     return version;
+}
+
+pub fn isValidVersion(version: []const u8) bool {
+    if (std.mem.count(u8, version, ".") != 3) {
+        return false;
+    }
+
+    var iter = std.mem.splitAny(u8, version, ".");
+    while (iter.next()) |s| {
+        _ = std.fmt.parseInt(usize, s, 10) catch {
+            return false;
+        };
+    }
+
+    return true;
 }
