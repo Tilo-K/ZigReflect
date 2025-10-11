@@ -23,7 +23,20 @@ fn on_request(r: zap.Request) !void {
         const file = std.mem.trim(u8, the_path, "/ ");
         const version = filename.extractFilename(alloc, file);
         if (version) |ver| {
-            const path = try download.getZig(alloc, ver, file, dataDir.?);
+            const path = download.getZig(alloc, ver, file, dataDir.?) catch |e| {
+                switch (e) {
+                    download.errors.NotFound => {
+                        r.setStatusNumeric(404);
+                        try r.sendBody("Not found");
+                        return;
+                    },
+                    else => {
+                        r.setStatusNumeric(500);
+                        try r.sendBody("Something went wrong");
+                        return;
+                    },
+                }
+            };
             defer alloc.free(path);
 
             try r.sendFile(path);

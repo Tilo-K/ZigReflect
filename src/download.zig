@@ -1,7 +1,7 @@
 const std = @import("std");
-const errors = error{ NotFound, Unknown };
+pub const errors = error{ NotFound, Unknown };
 
-pub fn downloadZig(allocator: std.mem.Allocator, version: []const u8, file: []const u8, downloadFolder: std.fs.Dir) ![]const u8 {
+pub fn downloadZig(allocator: std.mem.Allocator, version: []const u8, file: []const u8, downloadFolder: std.fs.Dir) anyerror![]const u8 {
     var client = std.http.Client{
         .allocator = allocator,
     };
@@ -61,7 +61,7 @@ pub fn downloadZig(allocator: std.mem.Allocator, version: []const u8, file: []co
     return errors.Unknown;
 }
 
-pub fn getZig(allocator: std.mem.Allocator, version: []const u8, file: []const u8, downloadFolder: std.fs.Dir) ![]const u8 {
+pub fn getZig(allocator: std.mem.Allocator, version: []const u8, file: []const u8, downloadFolder: std.fs.Dir) anyerror![]const u8 {
     const versionDir = try downloadFolder.makeOpenPath(
         version,
         .{ .access_sub_paths = true, .iterate = true },
