@@ -2,6 +2,7 @@ providers = ["zig"]
 
 [variables]
 ZIG_VERSION = "0.15.1"
+NIXPACKS_ZIG_VERSION = "0.15.1"
 
 [phases.build]
 cmds = ["zig build -Doptimize=ReleaseFast"]
