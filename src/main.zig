@@ -30,6 +30,10 @@ fn on_request(r: zap.Request) !void {
                         try r.sendBody("Not found");
                         return;
                     },
+                    download.errors.Timeout => {
+                        r.setStatusNumeric(504);
+                        try r.sendBody("ziglang.org did not respond in time");
+                    },
                     else => {
                         r.setStatusNumeric(500);
                         try r.sendBody("Something went wrong");

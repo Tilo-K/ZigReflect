@@ -1,5 +1,5 @@
 const std = @import("std");
-pub const errors = error{ NotFound, Unknown };
+pub const errors = error{ NotFound, Timeout, Unknown };
 
 pub fn downloadZig(allocator: std.mem.Allocator, version: []const u8, file: []const u8, downloadFolder: std.fs.Dir) anyerror![]const u8 {
     var client = std.http.Client{
@@ -39,11 +39,20 @@ pub fn downloadZig(allocator: std.mem.Allocator, version: []const u8, file: []co
     };
     var writer = zig_version.writerStreaming(buff);
 
-    const response = try client.fetch(.{
+    const response = client.fetch(.{
         .method = .GET,
         .location = .{ .url = downloadUrl },
         .response_writer = &writer.interface,
-    });
+    }) catch |e| {
+        switch (e) {
+            std.http.Client.RequestError.ConnectionTimedOut => {
+                return errors.Timeout;
+            },
+            else => {
+                return e;
+            },
+        }
+    };
 
     std.log.info("Download got status {d}", .{@intFromEnum(response.status)});
     const path = try versionDir.realpathAlloc(allocator, file);
