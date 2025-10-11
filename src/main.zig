@@ -2,8 +2,10 @@ const std = @import("std");
 const zap = @import("zap");
 const download = @import("download.zig");
 const filename = @import("filename.zig");
+const cache = @import("cache.zig");
 
 var dataDir: ?std.fs.Dir = null;
+var accessCache: ?cache.AccessCache = null;
 
 fn on_request(r: zap.Request) !void {
     var allocator = std.heap.GeneralPurposeAllocator(.{}){};
@@ -22,11 +24,18 @@ fn on_request(r: zap.Request) !void {
         }
 
         const file = std.mem.trim(u8, the_path, "/ ");
+        if (accessCache.?.isKnownUnavailable(file)) {
+            r.setStatusNumeric(404);
+            try r.sendBody("Not found");
+            return;
+        }
+
         const version = filename.extractVersion(alloc, file);
         if (version) |ver| {
             const path = download.getZig(alloc, ver, file, dataDir.?) catch |e| {
                 switch (e) {
                     download.errors.NotFound => {
+                        try accessCache.?.addUnavailableFile(file);
                         r.setStatusNumeric(404);
                         try r.sendBody("Not found");
                         return;
@@ -57,6 +66,7 @@ fn on_request(r: zap.Request) !void {
             try r.sendFile(path);
             return;
         } else {
+            try accessCache.?.addUnavailableFile(file);
             r.setStatusNumeric(404);
             try r.sendBody("Not found");
         }
@@ -74,7 +84,6 @@ pub fn main() !void {
         std.log.err("Error loading env vars {s}", .{@errorName(e)});
         std.process.exit(100);
     };
-    defer envMap.deinit();
 
     var port: usize = 3000;
     if (envMap.get("PORT")) |prt| {
@@ -87,6 +96,7 @@ pub fn main() !void {
             port = new_port;
         }
     }
+    defer envMap.deinit();
 
     if (envMap.get("DATA_DIR")) |ddir| {
         dataDir = try std.fs.cwd().makeOpenPath(
@@ -105,6 +115,9 @@ pub fn main() !void {
             },
         );
     }
+
+    accessCache = cache.AccessCache.init(alloc);
+    defer accessCache.?.deinit() catch null;
 
     var listener = zap.HttpListener.init(.{
         .port = port,
