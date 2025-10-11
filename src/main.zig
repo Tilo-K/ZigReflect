@@ -3,31 +3,37 @@ const zap = @import("zap");
 const download = @import("download.zig");
 const filename = @import("filename.zig");
 
+var dataDir: ?std.fs.Dir = null;
+
 fn on_request(r: zap.Request) !void {
     var allocator = std.heap.GeneralPurposeAllocator(.{}){};
     const alloc = allocator.allocator();
 
     if (r.path) |the_path| {
-        std.debug.print("PATH: {s}\n", .{the_path});
+        if (std.mem.eql(u8, the_path, "/") | std.mem.eql(u8, the_path, "")) {
+            r.setStatusNumeric(200);
+            try r.sendBody("ZigReflect");
+            return;
+        }
         if (std.mem.startsWith(u8, the_path, "/admin")) {
-            const data = try download.downloadZig(alloc);
-            try r.sendBody(data);
+            try r.sendBody("Nope");
             return;
         }
 
         const file = std.mem.trim(u8, the_path, "/ ");
         const version = filename.extractFilename(alloc, file);
         if (version) |ver| {
-            r.sendBody(try std.fmt.allocPrint(alloc, "<h1>{s}</h1>", .{ver})) catch return;
+            const path = try download.getZig(alloc, ver, file, dataDir.?);
+            defer alloc.free(path);
+
+            try r.sendFile(path);
+            return;
         } else {
             try r.sendBody(":( :( :(");
         }
         return;
     }
 
-    if (r.query) |the_query| {
-        std.debug.print("QUERY: {s}\n", .{the_query});
-    }
     r.sendBody("<html><body><h1>Hello from ZAP!!!</h1></body></html>") catch return;
 }
 
@@ -51,6 +57,24 @@ pub fn main() !void {
         if (new_port != 0) {
             port = new_port;
         }
+    }
+
+    if (envMap.get("DATA_DIR")) |ddir| {
+        dataDir = try std.fs.cwd().makeOpenPath(
+            ddir,
+            .{
+                .access_sub_paths = true,
+                .iterate = true,
+            },
+        );
+    } else {
+        dataDir = try std.fs.cwd().makeOpenPath(
+            "./data",
+            .{
+                .access_sub_paths = true,
+                .iterate = true,
+            },
+        );
     }
 
     var listener = zap.HttpListener.init(.{
