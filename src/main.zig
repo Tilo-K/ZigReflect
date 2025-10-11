@@ -49,7 +49,8 @@ fn on_request(r: zap.Request) !void {
             try r.sendFile(path);
             return;
         } else {
-            try r.sendBody(":( :( :(");
+            r.setStatusNumeric(404);
+            try r.sendBody("Not found");
         }
         return;
     }

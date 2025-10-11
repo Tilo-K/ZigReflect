@@ -58,7 +58,8 @@ pub fn extractFilename(allocator: std.mem.Allocator, filename: []const u8) ?[]co
 }
 
 pub fn isValidVersion(version: []const u8) bool {
-    if (std.mem.count(u8, version, ".") != 3) {
+    std.log.info("{s}", .{version});
+    if (std.mem.count(u8, version, ".") != 2) {
         return false;
     }
 
