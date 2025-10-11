@@ -1,0 +1,10 @@
+providers = ["zig"]
+
+[variables]
+ZIG_VERSION = "0.15.1"
+
+[phases.build]
+cmds = ["zig build -Doptimize=ReleaseFast"]
+
+[start]
+cmd = "./zig-out/bin/ZigReflect"
