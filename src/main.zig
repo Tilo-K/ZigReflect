@@ -116,6 +116,11 @@ pub fn main() !void {
         );
     }
 
+    var dbFile: []const u8 = "./db.sqlite3";
+    if (envMap.get("DB_FILE")) |db_file| {
+        dbFile = db_file;
+    }
+
     if (envMap.get("AUTH")) |auth| {
         authData = auth;
     }

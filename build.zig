@@ -29,6 +29,12 @@ pub fn build(b: *std.Build) void {
 
     exe.root_module.addImport("datetime", pg.module("datetime"));
 
+    const sqlite = b.dependency("sqlite", .{
+        .target = target,
+        .optimize = optimize,
+    });
+    exe.root_module.addImport("sqlite", sqlite.module("sqlite"));
+
     b.installArtifact(exe);
 
     const run_step = b.step("run", "Run the app");
