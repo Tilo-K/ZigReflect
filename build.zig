@@ -22,6 +22,13 @@ pub fn build(b: *std.Build) void {
 
     exe.root_module.addImport("zap", zap.module("zap"));
 
+    const pg = b.dependency("datetime", .{
+        .target = target,
+        .optimize = optimize,
+    });
+
+    exe.root_module.addImport("datetime", pg.module("datetime"));
+
     b.installArtifact(exe);
 
     const run_step = b.step("run", "Run the app");

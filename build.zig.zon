@@ -36,6 +36,10 @@
             .url = "git+https://github.com/zigzap/zap?ref=v0.11.0#66c5dc42c781bbb8a9100afda3c7e69ee96eddf3",
             .hash = "zap-0.10.6-GoeB8xCEJABLgoiZjWZMMT5TsoZ5OO2EZe6j24RTUYEH",
         },
+        .datetime = .{
+            .url = "git+https://github.com/frmdstryr/zig-datetime?ref=master#3a39a21e6e34dcb0ade0ff828d0914d40ba535f3",
+            .hash = "datetime-0.8.0-cJNXzP_YAQBxQ5hkNNP6ScnG5XsqciJmeP5RVV4xwCBA",
+        },
     },
     .paths = .{
         "build.zig",

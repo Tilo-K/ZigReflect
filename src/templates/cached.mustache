@@ -1,0 +1,37 @@
+<html>
+    <head>
+        <title>Cached files</title>
+    </head>
+    <body>
+        <h1>Cached files</h1>
+        <p>count: {{files.len}}</p>
+        <table id="file_table">
+            <thead>
+                <tr>
+                    <th>Path</th>
+                    <th>Size</th>
+                    <th>Last access time</th>
+                </tr>
+            </thead>
+            {{#files}}
+            <tr>
+                <td>{{value}}</td>
+                <td>{{size}}</td>
+                <td>{{atime}}</td>
+            </tr>
+            {{/files}}
+        </table>
+    </body>
+    <style>
+        body{
+            margin: 0;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        #file_table{
+            width: 100%;
+            max-width: 900px;
+        }
+    </style>
+</html>
