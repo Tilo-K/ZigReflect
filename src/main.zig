@@ -45,7 +45,14 @@ fn on_request(r: zap.Request) !void {
                 }
             };
             defer alloc.free(path);
+            const f = try std.fs.openFileAbsolute(path, .{});
+            const stat = try f.stat();
+            const size = try std.fmt.allocPrint(alloc, "{d}", .{stat.size});
+            defer alloc.free(size);
+            f.close();
 
+            r.setStatusNumeric(200);
+            try r.setHeader("Content-Length", size);
             try r.sendFile(path);
             return;
         } else {
