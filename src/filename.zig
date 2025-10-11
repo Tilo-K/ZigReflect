@@ -1,6 +1,11 @@
 const std = @import("std");
 
-const supportedExt = [_][]const u8{ ".tar.xz", ".zip", ".tar.xz.minisig", ".zip.minisig" };
+const supportedExt = [_][]const u8{
+    ".tar.xz.minisig",
+    ".zip.minisig",
+    ".tar.xz",
+    ".zip",
+};
 
 // Validate that the file name starts with zig-
 // Validate that the file name ends with a supported extension (.tar.xz, .zip, .tar.xz.minisig, .zip.minisig)
