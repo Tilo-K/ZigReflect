@@ -8,6 +8,7 @@ var dataDir: ?std.fs.Dir = null;
 fn on_request(r: zap.Request) !void {
     var allocator = std.heap.GeneralPurposeAllocator(.{}){};
     const alloc = allocator.allocator();
+    defer _ = allocator.deinit();
 
     if (r.path) |the_path| {
         if (std.mem.eql(u8, the_path, "/") | std.mem.eql(u8, the_path, "")) {
