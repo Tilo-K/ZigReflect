@@ -74,10 +74,11 @@ pub fn downloadZig(allocator: std.mem.Allocator, version: []const u8, file: []co
 }
 
 pub fn getZig(allocator: std.mem.Allocator, version: []const u8, file: []const u8, downloadFolder: std.fs.Dir) anyerror![]const u8 {
-    const versionDir = try downloadFolder.makeOpenPath(
+    var versionDir = try downloadFolder.makeOpenPath(
         version,
         .{ .access_sub_paths = true, .iterate = true },
     );
+    defer versionDir.close();
 
     versionDir.access(file, .{}) catch {
         return downloadZig(allocator, version, file, downloadFolder);

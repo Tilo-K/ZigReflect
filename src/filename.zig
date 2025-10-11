@@ -25,7 +25,7 @@ pub fn isValidFilename(filename: []const u8) bool {
 
 // Find the last occurrence of "-" in the file name; if that byte is followed by the string "dev", find the previous occurence of "-" instead
 // The substring after that "-" byte, and excluding the trailing file extension, is the Zig version
-pub fn extractFilename(allocator: std.mem.Allocator, filename: []const u8) ?[]const u8 {
+pub fn extractVersion(allocator: std.mem.Allocator, filename: []const u8) ?[]const u8 {
     if (!isValidFilename(filename)) {
         return null;
     }
@@ -35,6 +35,7 @@ pub fn extractFilename(allocator: std.mem.Allocator, filename: []const u8) ?[]co
     while (splitIter.next()) |part| {
         split.append(allocator, part) catch return null;
     }
+    defer split.deinit(allocator);
 
     var version = split.getLast();
     if (std.mem.startsWith(u8, version, "dev")) {
@@ -47,6 +48,7 @@ pub fn extractFilename(allocator: std.mem.Allocator, filename: []const u8) ?[]co
 
         const new_version = allocator.alloc(u8, new_len) catch return null;
         _ = std.mem.replace(u8, version, ext, "", new_version);
+
         version = new_version;
     }
 

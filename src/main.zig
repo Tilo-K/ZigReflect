@@ -22,7 +22,7 @@ fn on_request(r: zap.Request) !void {
         }
 
         const file = std.mem.trim(u8, the_path, "/ ");
-        const version = filename.extractFilename(alloc, file);
+        const version = filename.extractVersion(alloc, file);
         if (version) |ver| {
             const path = download.getZig(alloc, ver, file, dataDir.?) catch |e| {
                 switch (e) {
