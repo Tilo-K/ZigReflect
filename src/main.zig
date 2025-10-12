@@ -10,9 +10,13 @@ var accessCache: ?cache.AccessCache = null;
 var authData: []const u8 = "YWRtaW46YWRtaW4=";
 
 fn on_request(r: zap.Request) !void {
-    var allocator = std.heap.GeneralPurposeAllocator(.{}){};
-    const alloc = allocator.allocator();
-    defer _ = allocator.deinit();
+    var gpa = std.heap.DebugAllocator(.{ .retain_metadata = true }){};
+    defer _ = gpa.deinit();
+
+    var arena = std.heap.ArenaAllocator.init(gpa.allocator());
+    defer arena.deinit();
+
+    const alloc = arena.allocator();
 
     if (r.path) |the_path| {
         if (std.mem.eql(u8, the_path, "/") | std.mem.eql(u8, the_path, "")) {
