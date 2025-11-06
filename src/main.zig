@@ -16,9 +16,9 @@ fn on_request(r: zap.Request) !void {
     var arena = std.heap.ArenaAllocator.init(gpa.allocator());
     defer arena.deinit();
 
-    // const alloc = arena.allocator();
+    const alloc = arena.allocator();
 
-    const alloc = gpa.allocator();
+    //const alloc = gpa.allocator();
 
     if (r.path) |the_path| {
         if (std.mem.eql(u8, the_path, "/") | std.mem.eql(u8, the_path, "")) {
