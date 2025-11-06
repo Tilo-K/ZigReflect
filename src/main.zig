@@ -10,7 +10,7 @@ var accessCache: ?cache.AccessCache = null;
 var authData: []const u8 = "YWRtaW46YWRtaW4=";
 
 fn on_request(r: zap.Request) !void {
-    var gpa = std.heap.DebugAllocator(.{ .retain_metadata = true, .verbose_log = true, .stack_trace_frames = 10 }){};
+    var gpa = std.heap.DebugAllocator(.{ .retain_metadata = true, .stack_trace_frames = 10 }){};
     defer _ = gpa.deinit();
 
     var arena = std.heap.ArenaAllocator.init(gpa.allocator());
