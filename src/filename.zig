@@ -47,17 +47,23 @@ pub fn extractVersion(allocator: std.mem.Allocator, filename: []const u8) ?[]con
         version = split.items[split.items.len - 2];
     }
 
+    var allocated_version: ?[]const u8 = null;
+
     for (supportedExt) |ext| {
         const new_len = std.mem.replacementSize(u8, version, ext, "");
         if (new_len == version.len) continue;
+
+        if (allocated_version) |prev| allocator.free(prev);
 
         const new_version = allocator.alloc(u8, new_len) catch return null;
         _ = std.mem.replace(u8, version, ext, "", new_version);
 
         version = new_version;
+        allocated_version = new_version;
     }
 
     if (!isValidVersion(version)) {
+        if (allocated_version) |v| allocator.free(v);
         return null;
     }
 
@@ -71,6 +77,7 @@ pub fn isValidVersion(version: []const u8) bool {
     }
 
     var iter = std.mem.splitAny(u8, version, ".");
+
     while (iter.next()) |s| {
         _ = std.fmt.parseInt(usize, s, 10) catch {
             return false;

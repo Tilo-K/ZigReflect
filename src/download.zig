@@ -5,6 +5,7 @@ pub fn downloadZig(allocator: std.mem.Allocator, version: []const u8, file: []co
     var client = std.http.Client{
         .allocator = allocator,
     };
+    defer client.deinit();
 
     var downloadUrl: []u8 = "";
 
@@ -25,10 +26,11 @@ pub fn downloadZig(allocator: std.mem.Allocator, version: []const u8, file: []co
     defer allocator.free(downloadUrl);
 
     std.log.info("Trying to download: {s}", .{downloadUrl});
-    const versionDir = try downloadFolder.makeOpenPath(
+    var versionDir = try downloadFolder.makeOpenPath(
         version,
         .{ .access_sub_paths = true, .iterate = true },
     );
+    defer versionDir.close();
 
     var zig_version = try versionDir.createFile(file, .{});
     defer zig_version.close();
@@ -37,6 +39,7 @@ pub fn downloadZig(allocator: std.mem.Allocator, version: []const u8, file: []co
         std.log.err("No memory for download/file buffer: {s}", .{@errorName(e)});
         return e;
     };
+    defer allocator.free(buff);
     var writer = zig_version.writerStreaming(buff);
 
     const response = client.fetch(.{
