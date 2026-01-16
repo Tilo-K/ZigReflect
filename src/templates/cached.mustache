@@ -7,22 +7,24 @@
             <h1>Cached files</h1>
             <p>count: {{count}}</p>
             <p>size: {{size}}</p>
-            <table id="file_table">
-                <thead>
+            <div id="file_table">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Path</th>
+                            <th>Size</th>
+                            <th>Last access time</th>
+                        </tr>
+                    </thead>
+                    {{#files}}
                     <tr>
-                        <th>Path</th>
-                        <th>Size</th>
-                        <th>Last access time</th>
+                        <td>{{value}}</td>
+                        <td>{{size}}</td>
+                        <td>{{atime}}</td>
                     </tr>
-                </thead>
-                {{#files}}
-                <tr>
-                    <td>{{value}}</td>
-                    <td>{{size}}</td>
-                    <td>{{atime}}</td>
-                </tr>
-                {{/files}}
-            </table>
+                    {{/files}}
+                </table>
+            </div>
         </div>
     </body>
     <style>
