@@ -18,8 +18,6 @@ fn on_request(r: zap.Request) !void {
 
     const alloc = arena.allocator();
 
-    //const alloc = gpa.allocator();
-
     if (r.path) |the_path| {
         if (std.mem.eql(u8, the_path, "/") | std.mem.eql(u8, the_path, "")) {
             r.setStatusNumeric(200);
