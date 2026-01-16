@@ -3,36 +3,48 @@
         <title>Cached files</title>
     </head>
     <body>
-        <h1>Cached files</h1>
-        <p>count: {{count}}</p>
-        <p>size: {{size}}</p>
-        <table id="file_table">
-            <thead>
+        <div id="cached_files">
+            <h1>Cached files</h1>
+            <p>count: {{count}}</p>
+            <p>size: {{size}}</p>
+            <table id="file_table">
+                <thead>
+                    <tr>
+                        <th>Path</th>
+                        <th>Size</th>
+                        <th>Last access time</th>
+                    </tr>
+                </thead>
+                {{#files}}
                 <tr>
-                    <th>Path</th>
-                    <th>Size</th>
-                    <th>Last access time</th>
+                    <td>{{value}}</td>
+                    <td>{{size}}</td>
+                    <td>{{atime}}</td>
                 </tr>
-            </thead>
-            {{#files}}
-            <tr>
-                <td>{{value}}</td>
-                <td>{{size}}</td>
-                <td>{{atime}}</td>
-            </tr>
-            {{/files}}
-        </table>
+                {{/files}}
+            </table>
+        </div>
     </body>
     <style>
         body{
             margin: 0;
             width: 100vw;
             height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #cached_files{
+            padding: 2rem;
+            border-radius: 1rem;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+            width: 100%;
+            max-width: 1100px;
         }
 
         #file_table{
             width: 100%;
-            max-width: 900px;
         }
     </style>
 </html>
