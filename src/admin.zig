@@ -47,19 +47,8 @@ const FileItem = struct {
     atime: []const u8,
 };
 
-fn renderCached(allocator: std.mem.Allocator, r: zap.Request, dataDir: std.fs.Dir) !void {
-    var template = try Mustache.fromData(@embedFile("./templates/cached.mustache"));
-    defer template.deinit();
-
+fn getCachedFiles(allocator: std.mem.Allocator, dataDir: std.fs.Dir) !std.ArrayList(FileItem) {
     var cachedFiles = try std.ArrayList(FileItem).initCapacity(allocator, 10);
-    defer {
-        for (cachedFiles.items) |p| {
-            allocator.free(p.value);
-            allocator.free(p.atime);
-            allocator.free(p.size);
-        }
-        cachedFiles.deinit(allocator);
-    }
 
     var walker = try dataDir.walk(allocator);
     while (try walker.next()) |entry| {
@@ -81,8 +70,43 @@ fn renderCached(allocator: std.mem.Allocator, r: zap.Request, dataDir: std.fs.Di
         });
     }
 
+    return cachedFiles;
+}
+
+fn renderCached(allocator: std.mem.Allocator, r: zap.Request, dataDir: std.fs.Dir) !void {
+    var template = try Mustache.fromData(@embedFile("./templates/cached.mustache"));
+    defer template.deinit();
+    var size: u64 = 0;
+
+    var walker = try dataDir.walk(allocator);
+    while (try walker.next()) |entry| {
+        if (entry.kind == .directory) continue;
+
+        const path = try allocator.alloc(u8, entry.path.len);
+        @memcpy(path, entry.path);
+
+        const f = try dataDir.openFile(path, .{});
+        const stat = try f.stat();
+
+        size += stat.size;
+        allocator.free(path);
+    }
+
+    var cachedFiles = try getCachedFiles(allocator, dataDir);
+
+    defer {
+        for (cachedFiles.items) |p| {
+            allocator.free(p.value);
+            allocator.free(p.atime);
+            allocator.free(p.size);
+        }
+        cachedFiles.deinit(allocator);
+    }
+
     const ret = template.build(.{
         .files = cachedFiles.items,
+        .count = @as(isize, @intCast(cachedFiles.items.len)),
+        .size = try formatAsFileSize(@floatFromInt(size), allocator),
     });
 
     if (r.setContentType(.HTML)) {
