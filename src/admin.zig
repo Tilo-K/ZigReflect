@@ -3,7 +3,7 @@ const zap = @import("zap");
 const datetime = @import("datetime");
 const Mustache = zap.Mustache;
 
-pub fn handleAdmin(allocator: std.mem.Allocator, r: zap.Request, path: []const u8, authData: []const u8, dataDir: std.fs.Dir) !void {
+pub fn handleAdmin(io: std.Io, allocator: std.mem.Allocator, r: zap.Request, path: []const u8, authData: []const u8, dataDir: std.Io.Dir) !void {
     if (r.getHeader("authorization")) |auth_header| {
         if (!std.mem.endsWith(u8, auth_header, authData)) {
             try r.setHeader("WWW-Authenticate", "Basic realm=\"Restricted Area\", charset=\"UTF-8\"");
@@ -13,7 +13,7 @@ pub fn handleAdmin(allocator: std.mem.Allocator, r: zap.Request, path: []const u
         }
 
         if (std.mem.eql(u8, path, "/admin/cached")) {
-            return renderCached(allocator, r, dataDir);
+            return renderCached(io, allocator, r, dataDir);
         }
         r.setStatusNumeric(200);
         try r.sendBody(auth_header);
@@ -47,20 +47,20 @@ const FileItem = struct {
     atime: []const u8,
 };
 
-fn getCachedFiles(allocator: std.mem.Allocator, dataDir: std.fs.Dir) !std.ArrayList(FileItem) {
+fn getCachedFiles(io: std.Io, allocator: std.mem.Allocator, dataDir: std.Io.Dir) !std.ArrayList(FileItem) {
     var cachedFiles = try std.ArrayList(FileItem).initCapacity(allocator, 10);
 
     var walker = try dataDir.walk(allocator);
-    while (try walker.next()) |entry| {
+    while (try walker.next(io)) |entry| {
         if (entry.kind == .directory) continue;
 
         const path = try allocator.alloc(u8, entry.path.len);
         @memcpy(path, entry.path);
 
-        const f = try dataDir.openFile(path, .{});
-        const stat = try f.stat();
+        const f = try dataDir.openFile(io, path, .{});
+        const stat = try f.stat(io);
 
-        const dt = datetime.datetime.Datetime.fromModifiedTime(stat.atime);
+        const dt = datetime.datetime.Datetime.fromModifiedTime(@intCast((stat.atime orelse stat.mtime).nanoseconds));
         const t = try dt.formatISO8601(allocator, false);
 
         try cachedFiles.append(allocator, .{
@@ -73,26 +73,26 @@ fn getCachedFiles(allocator: std.mem.Allocator, dataDir: std.fs.Dir) !std.ArrayL
     return cachedFiles;
 }
 
-fn renderCached(allocator: std.mem.Allocator, r: zap.Request, dataDir: std.fs.Dir) !void {
+fn renderCached(io: std.Io, allocator: std.mem.Allocator, r: zap.Request, dataDir: std.Io.Dir) !void {
     var template = try Mustache.fromData(@embedFile("./templates/cached.mustache"));
     defer template.deinit();
     var size: u64 = 0;
 
     var walker = try dataDir.walk(allocator);
-    while (try walker.next()) |entry| {
+    while (try walker.next(io)) |entry| {
         if (entry.kind == .directory) continue;
 
         const path = try allocator.alloc(u8, entry.path.len);
         @memcpy(path, entry.path);
 
-        const f = try dataDir.openFile(path, .{});
-        const stat = try f.stat();
+        const f = try dataDir.openFile(io, path, .{});
+        const stat = try f.stat(io);
 
         size += stat.size;
         allocator.free(path);
     }
 
-    var cachedFiles = try getCachedFiles(allocator, dataDir);
+    var cachedFiles = try getCachedFiles(io, allocator, dataDir);
 
     defer {
         for (cachedFiles.items) |p| {

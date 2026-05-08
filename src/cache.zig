@@ -1,7 +1,7 @@
 const std = @import("std");
 
 pub const AccessCache = struct {
-    notFoundMutex: std.Thread.Mutex,
+    notFoundMutex: std.Io.Mutex,
     notFoundMap: std.StringHashMap(i64),
     allocator: std.mem.Allocator,
 
@@ -9,7 +9,7 @@ pub const AccessCache = struct {
         const map = std.StringHashMap(i64).init(allocator);
         return AccessCache{
             .notFoundMap = map,
-            .notFoundMutex = .{},
+            .notFoundMutex = .init,
             .allocator = allocator,
         };
     }
@@ -18,28 +18,28 @@ pub const AccessCache = struct {
         self.notFoundMap.deinit();
     }
 
-    pub fn addUnavailableFile(self: *AccessCache, file: []const u8) !void {
+    pub fn addUnavailableFile(self: *AccessCache, io: std.Io, file: []const u8) !void {
         std.debug.print("Adding not found file {s}\n", .{file});
         const owned_file = try self.allocator.alloc(u8, file.len);
         @memcpy(owned_file, file);
 
-        self.notFoundMutex.lock();
-        defer self.notFoundMutex.unlock();
-        const time = std.time.timestamp();
+        try self.notFoundMutex.lock(io);
+        defer self.notFoundMutex.unlock(io);
+        const time = std.Io.Timestamp.now(io, .real).toSeconds();
         try self.notFoundMap.put(owned_file, time);
     }
 
-    pub fn isKnownUnavailable(self: *AccessCache, file: []const u8) bool {
+    pub fn isKnownUnavailable(self: *AccessCache, io: std.Io, file: []const u8) bool {
         if (self.notFoundMap.get(file)) |timestamp| {
-            const now = std.time.timestamp();
+            const now = std.Io.Timestamp.now(io, .real).toSeconds();
             const delta = now - timestamp;
             if (delta < 60) {
                 std.debug.print("Found cached not found file\n", .{});
                 return true;
             }
 
-            self.notFoundMutex.lock();
-            defer self.notFoundMutex.unlock();
+            self.notFoundMutex.lockUncancelable(io);
+            defer self.notFoundMutex.unlock(io);
             _ = self.notFoundMap.remove(file);
         }
 
