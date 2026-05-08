@@ -1,0 +1,6 @@
+.git
+.zig-cache
+.zig-global-cache
+zig-out
+zig-pkg
+data
