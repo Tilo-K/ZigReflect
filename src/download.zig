@@ -34,8 +34,25 @@ pub fn downloadZig(io: std.Io, allocator: std.mem.Allocator, version: []const u8
     );
     defer versionDir.close(io);
 
-    var zig_version = try versionDir.createFile(io, file, .{});
-    defer zig_version.close(io);
+    const timestamp = std.Io.Timestamp.now(io, .real).nanoseconds;
+    const tmp_file = try std.fmt.allocPrint(allocator, "{s}.{d}.tmp", .{ file, timestamp });
+    defer allocator.free(tmp_file);
+
+    var zig_version = try versionDir.createFile(io, tmp_file, .{});
+    var file_open = true;
+    defer if (file_open) zig_version.close(io);
+
+    const path = try versionDir.realPathFileAlloc(io, file, allocator);
+    const tmp_path = try versionDir.realPathFileAlloc(io, tmp_file, allocator);
+    defer allocator.free(tmp_path);
+    errdefer {
+        if (file_open) {
+            zig_version.close(io);
+            file_open = false;
+        }
+        std.Io.Dir.deleteFileAbsolute(io, tmp_path) catch {};
+        allocator.free(path);
+    }
 
     const buff = allocator.alloc(u8, 1024 * 1024 * 10) catch |e| {
         std.log.err("No memory for download/file buffer: {s}", .{@errorName(e)});
@@ -63,15 +80,16 @@ pub fn downloadZig(io: std.Io, allocator: std.mem.Allocator, version: []const u8
     try zig_version.sync(io);
 
     std.log.info("Download got status {d}", .{@intFromEnum(response.status)});
-    const path = try versionDir.realPathFileAlloc(io, file, allocator);
 
     if (@intFromEnum(response.status) == 200) {
         const fileStat = try zig_version.stat(io);
+        zig_version.close(io);
+        file_open = false;
+        try std.Io.Dir.rename(versionDir, tmp_file, versionDir, file, io);
         std.log.info("Got file: {s} with size {d}bytes", .{ path, fileStat.size });
 
         return path;
     } else if (@intFromEnum(response.status) == 404) {
-        try std.Io.Dir.deleteFileAbsolute(io, path);
         return errors.NotFound;
     }
 
