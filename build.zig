@@ -1,6 +1,17 @@
 const std = @import("std");
+const builtin = @import("builtin");
+
+const min_zig_version = std.SemanticVersion{ .major = 0, .minor = 16, .patch = 0 };
 
 pub fn build(b: *std.Build) void {
+    if (builtin.zig_version.order(min_zig_version) == .lt) {
+        std.log.err("ZigReflect requires Zig {f} or newer; found Zig {f}", .{
+            min_zig_version,
+            builtin.zig_version,
+        });
+        std.process.exit(1);
+    }
+
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 

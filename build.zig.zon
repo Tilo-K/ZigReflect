@@ -25,7 +25,7 @@
     .fingerprint = 0xbb07c80193756050, // Changing this has security and trust implications.
     // Tracks the earliest Zig version that the package considers to be a
     // supported use case.
-    .minimum_zig_version = "0.15.1",
+    .minimum_zig_version = "0.16.0",
     // This field is optional.
     // Each dependency must either provide a `url` and `hash`, or a `path`.
     // `zig build --fetch` can be used to fetch all dependencies of a package, recursively.
@@ -33,21 +33,21 @@
     // internet connectivity.
     .dependencies = .{
         .zap = .{
-            .url = "git+https://github.com/zigzap/zap?ref=v0.11.0#66c5dc42c781bbb8a9100afda3c7e69ee96eddf3",
-            .hash = "zap-0.10.6-GoeB8xCEJABLgoiZjWZMMT5TsoZ5OO2EZe6j24RTUYEH",
+            .path = "deps/zap",
         },
         .datetime = .{
             .url = "git+https://github.com/frmdstryr/zig-datetime?ref=master#3a39a21e6e34dcb0ade0ff828d0914d40ba535f3",
             .hash = "datetime-0.8.0-cJNXzP_YAQBxQ5hkNNP6ScnG5XsqciJmeP5RVV4xwCBA",
         },
         .sqlite = .{
-            .url = "git+https://github.com/vrischmann/zig-sqlite?ref=zig-0.15.1#3547902fe8f293637ca16a2b8a0bbaa89cf592a5",
-            .hash = "sqlite-3.48.0-F2R_a52ODgDFoOf0S8ZamFe2k7JJwqM0cDzOF6nxr_uO",
+            .url = "git+https://github.com/vrischmann/zig-sqlite?ref=fix-for-zig-master#7fd71e242b71ae8cb84f01d14f068f773f620207",
+            .hash = "sqlite-3.48.0-F2R_a8KPDgC9FKAvA3_lf1enn92aBWSbm5TV_W9J8bXx",
         },
     },
     .paths = .{
         "build.zig",
         "build.zig.zon",
+        "deps",
         "src",
         // For example...
         //"LICENSE",

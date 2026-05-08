@@ -5,7 +5,8 @@ const filename = @import("filename.zig");
 const cache = @import("cache.zig");
 const admin = @import("admin.zig");
 
-var dataDir: ?std.fs.Dir = null;
+var app_io: std.Io = undefined;
+var dataDir: ?std.Io.Dir = null;
 var accessCache: ?cache.AccessCache = null;
 var authData: []const u8 = "YWRtaW46YWRtaW4=";
 
@@ -25,11 +26,11 @@ fn on_request(r: zap.Request) !void {
             return;
         }
         if (std.mem.startsWith(u8, the_path, "/admin")) {
-            return admin.handleAdmin(alloc, r, the_path, authData, dataDir.?);
+            return admin.handleAdmin(app_io, alloc, r, the_path, authData, dataDir.?);
         }
 
         const file = std.mem.trim(u8, the_path, "/ ");
-        if (accessCache.?.isKnownUnavailable(file)) {
+        if (accessCache.?.isKnownUnavailable(app_io, file)) {
             r.setStatusNumeric(404);
             try r.sendBody("Not found");
             return;
@@ -38,10 +39,10 @@ fn on_request(r: zap.Request) !void {
         const version = filename.extractVersion(alloc, file);
         if (version) |ver| {
             defer alloc.free(ver);
-            const path = download.getZig(alloc, ver, file, dataDir.?) catch |e| {
+            const path = download.getZig(app_io, alloc, ver, file, dataDir.?) catch |e| {
                 switch (e) {
                     download.errors.NotFound => {
-                        try accessCache.?.addUnavailableFile(file);
+                        try accessCache.?.addUnavailableFile(app_io, file);
                         r.setStatusNumeric(404);
                         try r.sendBody("Not found");
                         return;
@@ -61,11 +62,11 @@ fn on_request(r: zap.Request) !void {
                 }
             };
             defer alloc.free(path);
-            const f = try std.fs.openFileAbsolute(path, .{});
-            const stat = try f.stat();
+            const f = try std.Io.Dir.openFileAbsolute(app_io, path, .{});
+            const stat = try f.stat(app_io);
             const size = try std.fmt.allocPrint(alloc, "{d}", .{stat.size});
             defer alloc.free(size);
-            f.close();
+            f.close(app_io);
 
             r.setStatusNumeric(200);
             try r.setHeader("Content-Length", size);
@@ -81,15 +82,10 @@ fn on_request(r: zap.Request) !void {
     r.sendBody("<html><body><h1>Hello from ZAP!!!</h1></body></html>") catch return;
 }
 
-pub fn main() !void {
-    var allocator = std.heap.GeneralPurposeAllocator(.{}){};
-    const alloc = allocator.allocator();
-
-    var envMap = std.process.getEnvMap(alloc) catch |e| {
-        std.log.err("Error loading env vars {s}", .{@errorName(e)});
-        std.process.exit(100);
-    };
-    defer envMap.deinit();
+pub fn main(init: std.process.Init) !void {
+    app_io = init.io;
+    const alloc = init.gpa;
+    const envMap = init.environ_map;
 
     var port: usize = 3000;
     if (envMap.get("PORT")) |prt| {
@@ -104,19 +100,19 @@ pub fn main() !void {
     }
 
     if (envMap.get("DATA_DIR")) |ddir| {
-        dataDir = try std.fs.cwd().makeOpenPath(
+        dataDir = try std.Io.Dir.cwd().createDirPathOpen(
+            app_io,
             ddir,
             .{
-                .access_sub_paths = true,
-                .iterate = true,
+                .open_options = .{ .iterate = true },
             },
         );
     } else {
-        dataDir = try std.fs.cwd().makeOpenPath(
+        dataDir = try std.Io.Dir.cwd().createDirPathOpen(
+            app_io,
             "./data",
             .{
-                .access_sub_paths = true,
-                .iterate = true,
+                .open_options = .{ .iterate = true },
             },
         );
     }
