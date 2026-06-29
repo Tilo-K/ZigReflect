@@ -1,8 +1,8 @@
 providers = ["zig"]
 
 [variables]
-ZIG_VERSION = "0.15.1"
-NIXPACKS_ZIG_VERSION = "0.15.1"
+ZIG_VERSION = "0.16.0"
+NIXPACKS_ZIG_VERSION = "0.16.0"
 
 [phases.setup]
 nixpkgsArchive = "bc725b12b2595951a3f4b112d59716d30b41001a"
