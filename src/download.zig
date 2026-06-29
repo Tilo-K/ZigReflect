@@ -1,5 +1,5 @@
 const std = @import("std");
-pub const errors = error{ NotFound, Timeout, Unknown };
+pub const errors = error{ NotFound, UpstreamUnavailable };
 
 pub fn downloadZig(io: std.Io, allocator: std.mem.Allocator, version: []const u8, file: []const u8, downloadFolder: std.Io.Dir) anyerror![]const u8 {
     var client = std.http.Client{
@@ -42,7 +42,6 @@ pub fn downloadZig(io: std.Io, allocator: std.mem.Allocator, version: []const u8
     var file_open = true;
     defer if (file_open) zig_version.close(io);
 
-    const path = try versionDir.realPathFileAlloc(io, file, allocator);
     const tmp_path = try versionDir.realPathFileAlloc(io, tmp_file, allocator);
     defer allocator.free(tmp_path);
     errdefer {
@@ -51,7 +50,6 @@ pub fn downloadZig(io: std.Io, allocator: std.mem.Allocator, version: []const u8
             file_open = false;
         }
         std.Io.Dir.deleteFileAbsolute(io, tmp_path) catch {};
-        allocator.free(path);
     }
 
     const buff = allocator.alloc(u8, 1024 * 1024 * 10) catch |e| {
@@ -66,14 +64,8 @@ pub fn downloadZig(io: std.Io, allocator: std.mem.Allocator, version: []const u8
         .location = .{ .url = downloadUrl },
         .response_writer = &writer.interface,
     }) catch |e| {
-        switch (e) {
-            error.Timeout => {
-                return errors.Timeout;
-            },
-            else => {
-                return e;
-            },
-        }
+        std.log.err("Upstream fetch failed: {s}", .{@errorName(e)});
+        return errors.UpstreamUnavailable;
     };
 
     try writer.interface.defaultFlush();
@@ -86,6 +78,7 @@ pub fn downloadZig(io: std.Io, allocator: std.mem.Allocator, version: []const u8
         zig_version.close(io);
         file_open = false;
         try std.Io.Dir.rename(versionDir, tmp_file, versionDir, file, io);
+        const path = try versionDir.realPathFileAlloc(io, file, allocator);
         std.log.info("Got file: {s} with size {d}bytes", .{ path, fileStat.size });
 
         return path;
@@ -93,7 +86,7 @@ pub fn downloadZig(io: std.Io, allocator: std.mem.Allocator, version: []const u8
         return errors.NotFound;
     }
 
-    return errors.Unknown;
+    return errors.UpstreamUnavailable;
 }
 
 pub fn getZig(io: std.Io, allocator: std.mem.Allocator, version: []const u8, file: []const u8, downloadFolder: std.Io.Dir) anyerror![]const u8 {

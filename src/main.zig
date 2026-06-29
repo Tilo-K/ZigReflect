@@ -12,7 +12,11 @@ var authData: []const u8 = "YWRtaW46YWRtaW4=";
 
 fn on_request(r: zap.Request) !void {
     var gpa = std.heap.DebugAllocator(.{ .retain_metadata = true, .stack_trace_frames = 10 }){};
-    defer _ = gpa.deinit();
+    defer {
+        if (gpa.deinit() == .leak) {
+            std.log.err("request leaked memory", .{});
+        }
+    }
 
     var arena = std.heap.ArenaAllocator.init(gpa.allocator());
     defer arena.deinit();
@@ -47,9 +51,9 @@ fn on_request(r: zap.Request) !void {
                         try r.sendBody("Not found");
                         return;
                     },
-                    download.errors.Timeout => {
+                    download.errors.UpstreamUnavailable => {
                         r.setStatusNumeric(504);
-                        try r.sendBody("ziglang.org did not respond in time");
+                        try r.sendBody("ziglang.org is unavailable");
                         return;
                     },
                     else => {
@@ -62,11 +66,11 @@ fn on_request(r: zap.Request) !void {
                 }
             };
             defer alloc.free(path);
-            const f = try std.Io.Dir.openFileAbsolute(app_io, path, .{});
+            var f = try std.Io.Dir.openFileAbsolute(app_io, path, .{});
+            defer f.close(app_io);
             const stat = try f.stat(app_io);
             const size = try std.fmt.allocPrint(alloc, "{d}", .{stat.size});
             defer alloc.free(size);
-            f.close(app_io);
 
             r.setStatusNumeric(200);
             try r.setHeader("Content-Length", size);

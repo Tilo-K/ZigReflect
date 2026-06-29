@@ -51,21 +51,29 @@ fn getCachedFiles(io: std.Io, allocator: std.mem.Allocator, dataDir: std.Io.Dir)
     var cachedFiles = try std.ArrayList(FileItem).initCapacity(allocator, 10);
 
     var walker = try dataDir.walk(allocator);
+    defer walker.deinit();
+
     while (try walker.next(io)) |entry| {
         if (entry.kind == .directory) continue;
 
-        const path = try allocator.alloc(u8, entry.path.len);
-        @memcpy(path, entry.path);
-
-        const f = try dataDir.openFile(io, path, .{});
-        const stat = try f.stat(io);
+        const path = try allocator.dupe(u8, entry.path);
+        errdefer allocator.free(path);
+        const stat = stat: {
+            var f = try dataDir.openFile(io, path, .{});
+            defer f.close(io);
+            break :stat try f.stat(io);
+        };
 
         const dt = datetime.datetime.Datetime.fromModifiedTime(@intCast((stat.atime orelse stat.mtime).nanoseconds));
         const t = try dt.formatISO8601(allocator, false);
+        errdefer allocator.free(t);
+
+        const size = try formatAsFileSize(@floatFromInt(stat.size), allocator);
+        errdefer allocator.free(size);
 
         try cachedFiles.append(allocator, .{
             .value = path,
-            .size = try formatAsFileSize(@floatFromInt(stat.size), allocator),
+            .size = size,
             .atime = t,
         });
     }
@@ -79,17 +87,18 @@ fn renderCached(io: std.Io, allocator: std.mem.Allocator, r: zap.Request, dataDi
     var size: u64 = 0;
 
     var walker = try dataDir.walk(allocator);
+    defer walker.deinit();
+
     while (try walker.next(io)) |entry| {
         if (entry.kind == .directory) continue;
 
-        const path = try allocator.alloc(u8, entry.path.len);
-        @memcpy(path, entry.path);
-
-        const f = try dataDir.openFile(io, path, .{});
-        const stat = try f.stat(io);
+        const stat = stat: {
+            var f = try dataDir.openFile(io, entry.path, .{});
+            defer f.close(io);
+            break :stat try f.stat(io);
+        };
 
         size += stat.size;
-        allocator.free(path);
     }
 
     var cachedFiles = try getCachedFiles(io, allocator, dataDir);
@@ -103,11 +112,15 @@ fn renderCached(io: std.Io, allocator: std.mem.Allocator, r: zap.Request, dataDi
         cachedFiles.deinit(allocator);
     }
 
+    const formatted_size = try formatAsFileSize(@floatFromInt(size), allocator);
+    defer allocator.free(formatted_size);
+
     const ret = template.build(.{
         .files = cachedFiles.items,
         .count = @as(isize, @intCast(cachedFiles.items.len)),
-        .size = try formatAsFileSize(@floatFromInt(size), allocator),
+        .size = formatted_size,
     });
+    defer ret.deinit();
 
     if (r.setContentType(.HTML)) {
         if (ret.str()) |s| {
